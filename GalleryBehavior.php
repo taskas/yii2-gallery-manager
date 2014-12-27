@@ -2,12 +2,18 @@
 
 namespace zxbodya\yii2\galleryManager;
 
+use Yii;
+use yii\base\Behavior;
+use yii\db\ActiveRecord;
+use zxbodya\yii2\galleryManager\models\Gallery;
+use zxbodya\yii2\galleryManager\models\GalleryPhoto;
+
 /**
  * Behavior for adding gallery to any model.
  *
  * @author Bogdan Savluk <savluk.bogdan@gmail.com>
  */
-class GalleryBehavior extends CActiveRecordBehavior
+class GalleryBehavior extends Behavior
 {
     /** @var string Model attribute name to store created gallery id */
     public $idAttribute;
@@ -25,33 +31,47 @@ class GalleryBehavior extends CActiveRecordBehavior
      */
     public $versions;
     /** @var boolean does images in gallery need names */
-    public $name;
+    public $name = true;
     /** @var boolean does images in gallery need descriptions */
-    public $description;
+    public $description = true;
 
     /** @var string Extensions for gallery images */
     public $extension = 'jpg';
 
     private $_gallery;
+    
+    
+//    public function attach($owner)
+//    {
+//        parent::attach($owner);
+//        
+//    }
+    
+    public function events()
+    {
+        return [
+            ActiveRecord::EVENT_BEFORE_INSERT => 'beforeSave',
+            ActiveRecord::EVENT_BEFORE_UPDATE => 'beforeSave',
+            ActiveRecord::EVENT_BEFORE_DELETE => 'beforeDelete',
+        ];
+    }
 
     /** Will create new gallery after save if no associated gallery exists */
     public function beforeSave($event)
     {
-        parent::beforeSave($event);
+        
         if ($event->isValid) {
-            if (empty($this->getOwner()->{$this->idAttribute})) {
+            if (empty($this->owner->{$this->idAttribute})) {
                 $gallery = new Gallery();
                 $gallery->name = $this->name;
                 $gallery->description = $this->description;
-                $gallery->versions = $this->versions;
+                $gallery->setVersions($this->versions);
                 $gallery->extension = $this->extension;
-                $gallery->save();
-
-                $this->getOwner()->{$this->idAttribute} = $gallery->id;
+                $gallery->save(false);
+                $this->owner->{$this->idAttribute} = $gallery->id;
             } else {
-                Yii::log(
-                    'Gallery configuration change in web-worker process, this should be in migrations',
-                    CLogger::LEVEL_WARNING
+                Yii::info(
+                    'Gallery configuration change in web-worker process, this should be in migrations'
                 );
                 $this->changeConfig();
             }
@@ -97,7 +117,7 @@ class GalleryBehavior extends CActiveRecordBehavior
             $gallery->versions = $this->versions;
             $gallery->save();
 
-            $gallery = Gallery::model()->findByPk($gallery->id);
+            $gallery = Gallery::find()->where(['id'=>$gallery->id])->one();
             foreach ($gallery->galleryPhotos as $photo) {
                 $photo->updateImages();
             }
@@ -109,7 +129,7 @@ class GalleryBehavior extends CActiveRecordBehavior
     public function getGallery()
     {
         if (empty($this->_gallery)) {
-            $this->_gallery = Gallery::model()->findByPk($this->getOwner()->{$this->idAttribute});
+            $this->_gallery = Gallery::find()->where(['id'=>$this->owner->{$this->idAttribute}])->one();
         }
 
         return $this->_gallery;
@@ -118,32 +138,18 @@ class GalleryBehavior extends CActiveRecordBehavior
     /** @return GalleryPhoto[] Photos from associated gallery */
     public function getPhotos()
     {
-        $criteria = new CDbCriteria();
-        $criteria->condition = 'gallery_id = :gallery_id';
-        $criteria->params[':gallery_id'] = $this->getOwner()->{$this->idAttribute};
-        $criteria->order = '`rank` asc';
-
-        return GalleryPhoto::model()->findAll($criteria);
+        return GalleryPhoto::find()->andWhere(['gallery_id'=>$this->owner->{$this->idAttribute}])->orderBy("`rank` asc")->all();
     }
 
     /** @return GalleryPhoto[] Photos from associated gallery */
     public function getFirstPhoto()
     {
-        $criteria = new CDbCriteria();
-        $criteria->condition = 'gallery_id = :gallery_id';
-        $criteria->params[':gallery_id'] = $this->getOwner()->{$this->idAttribute};
-        $criteria->order = '`rank` asc';
-
-        return GalleryPhoto::model()->find($criteria);
+        return GalleryPhoto::find()->andWhere(['gallery_id'=>$this->owner->{$this->idAttribute}])->orderBy("`rank` asc")->one();
     }
 
     /** @return GalleryPhoto[] Photos from associated gallery */
     public function getPhotoCount()
     {
-        $criteria = new CDbCriteria();
-        $criteria->condition = 'gallery_id = :gallery_id';
-        $criteria->params[':gallery_id'] = $this->getOwner()->{$this->idAttribute};
-
-        return GalleryPhoto::model()->count($criteria);
+        return GalleryPhoto::find()->andWhere(['gallery_id'=>$this->owner->{$this->idAttribute}])->count();
     }
 }

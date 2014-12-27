@@ -81,7 +81,7 @@ class GalleryPhoto extends \yii\db\ActiveRecord
 
     public function getPreview()
     {
-        return Yii::$app->request->baseUrl . '/' . $this->gallery->galleryDir . '/_' . $this->getFileName(
+        return Yii::getAlias('@galleryManagerRootUrl') . '/' . $this->gallery->directory . '/_' . $this->getFileName(
             ''
         ) . '.' . $this->gallery->extension;
     }
@@ -93,7 +93,7 @@ class GalleryPhoto extends \yii\db\ActiveRecord
 
     public function getUrl($version = '')
     {
-        return Yii::$app->request->baseUrl . '/' . $this->gallery->galleryDir . '/' . $this->getFileName(
+        return Yii::getAlias('@galleryManagerRootUrl') . '/' . $this->gallery->directory . '/' . $this->getFileName(
             $version
         ) . '.' . $this->gallery->extension;
     }
@@ -103,27 +103,27 @@ class GalleryPhoto extends \yii\db\ActiveRecord
     {
         //convert original
         Yii::$app->image->load(
-            Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName('') . '.' . $old
+            Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName('') . '.' . $old
         )->save(
-            Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName('') . '.' . $new
+            Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName('') . '.' . $new
         );
 
         //create image preview for gallery manager
         Yii::$app->image->load(
-            Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName('') . '.' . $old
+            Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName('') . '.' . $old
         )
             ->resize(300, null)
             ->save(
-                Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/_' . $this->getFileName(
+                Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/_' . $this->getFileName(
                     ''
                 ) . '.' . $new
             );
 
         $this->removeFile(
-            Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName('') . '.' . $old
+            Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName('') . '.' . $old
         );
         $this->removeFile(
-            Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/_' . $this->getFileName('') . '.' . $old
+            Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/_' . $this->getFileName('') . '.' . $old
         );
 
     }
@@ -134,7 +134,7 @@ class GalleryPhoto extends \yii\db\ActiveRecord
         //save image in original size
 
         $originalImage->save(
-            Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName(
+            Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName(
                 ''
             ) . '.' . $this->gallery->extension
         );
@@ -143,7 +143,7 @@ class GalleryPhoto extends \yii\db\ActiveRecord
         $originalImage
             ->copy()
             ->resize($originalImage->getSize()->widen(300))->save(
-                Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/_' . $this->getFileName(
+                Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/_' . $this->getFileName(
                     ''
                 ) . '.' . $this->gallery->extension
             );
@@ -154,12 +154,12 @@ class GalleryPhoto extends \yii\db\ActiveRecord
     public function delete()
     {
         $this->removeFile(
-            Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName(
+            Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName(
                 ''
             ) . '.' . $this->gallery->extension
         );
         $this->removeFile(
-            Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/_' . $this->getFileName(
+            Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/_' . $this->getFileName(
                 ''
             ) . '.' . $this->gallery->extension
         );
@@ -180,7 +180,7 @@ class GalleryPhoto extends \yii\db\ActiveRecord
     {
         foreach ($this->gallery->versions as $version => $actions) {
             $this->removeFile(
-                Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName(
+                Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName(
                     $version
                 ) . '.' . $this->gallery->extension
             );
@@ -194,26 +194,43 @@ class GalleryPhoto extends \yii\db\ActiveRecord
     {
         if ($originalImage === null) {
             $originalImage = Image::getImagine()->open(
-                Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName(
+                Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName(
                     ''
                 ) . '.' . $this->gallery->extension
             );
         }
         foreach ($this->gallery->versions as $version => $actions) {
             $this->removeFile(
-                Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir
+                Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory
                 . '/' . $this->getFileName($version) . '.' . $this->gallery->extension
             );
 
-//            foreach ($actions as $method => $args) {
-//                call_user_func_array(array($image, $method), is_array($args) ? $args : array($args));
-//            }
 
-            $originalImage->save(
-                Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName(
-                    $version
-                ) . '.' . $this->gallery->extension
-            );
+            foreach($actions as $method => $args){
+                if($method=='thumbnail'){
+                    $originalImage
+                    ->copy()
+                    ->$method($args[0])->save(
+                        Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName(
+                        $version
+                    ) . '.' . $this->gallery->extension
+                    );
+                }elseif($method=='widen'){
+                    $originalImage
+                    ->copy()
+                    ->resize($originalImage->getSize()->widen(800))->save(
+                        Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName(
+                        $version
+                    ) . '.' . $this->gallery->extension
+                    );
+                }
+            }
+
+//            $originalImage->save(
+//                Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName(
+//                    $version
+//                ) . '.' . $this->gallery->extension
+//            );
         }
     }
 
@@ -222,7 +239,7 @@ class GalleryPhoto extends \yii\db\ActiveRecord
     private function getSize($version = '')
     {
         if (!isset($this->_sizes[$version])) {
-            $path = Yii::getAlias('@webroot') . '/' . $this->gallery->galleryDir . '/' . $this->getFileName(
+            $path = Yii::getAlias('@galleryManagerRoot') . '/' . $this->gallery->directory . '/' . $this->getFileName(
                     $version
                 ) . '.' . $this->gallery->extension;
             $this->_sizes[$version] = getimagesize($path);

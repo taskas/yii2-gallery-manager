@@ -15,6 +15,12 @@
             "email": "savluk.bogdan@gmail.com"
         }
     ],
+	"repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/taskas/yii2-gallery-manager"
+        }
+    ],
     "require": {
         "yiisoft/yii2-jui": "*",
         "yiisoft/yii2-imagine": "*"

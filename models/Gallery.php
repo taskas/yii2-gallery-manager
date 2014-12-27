@@ -106,6 +106,13 @@ class Gallery extends \yii\db\ActiveRecord
 
     public function beforeSave($insert)
     {
+        if($this->isNewRecord){
+            $this->directory = $this->galleryDir.'/'.date('Y-m-d');
+            
+            if(!file_exists(Yii::getAlias('@galleryManagerRoot/'.$this->directory))){
+                mkdir(Yii::getAlias('@galleryManagerRoot/'.$this->directory));
+            }
+        }
         if (isset($this->_versions)) {
             $this->versions_data = serialize($this->_versions);
         }
