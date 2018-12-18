@@ -85,7 +85,7 @@ class GalleryBehavior extends Behavior
         if ($gallery !== null) {
             $gallery->delete();
         }
-        parent::beforeDelete($event);
+
     }
 
     /** Method for changing gallery configuration and regeneration of images versions */
